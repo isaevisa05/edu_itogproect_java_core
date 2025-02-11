@@ -1,18 +1,15 @@
 package edu.itogproect.java.core;
 
 import edu.itogproect.java.core.entity.Entity;
+import edu.itogproect.java.core.entity.trade.UseItem;
 import edu.itogproect.java.core.entity.monsters.Goblin;
 import edu.itogproect.java.core.entity.monsters.Skeleton;
+import edu.itogproect.java.core.entity.trade.Merchant;
 import edu.itogproect.java.core.entity.player.Player;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.function.*;
-import java.util.stream.*;
 
 public class Main {
 
@@ -20,6 +17,7 @@ public class Main {
     public static BufferedReader bufferedReader;
     public static BattleScene battleScene;
     public static boolean isBattleSceneUse = false;
+    public static boolean isTrading = false;
 
     public static void main(String[] args) throws IOException {
         bufferedReader = new BufferedReader(new InputStreamReader(System.in));
@@ -29,6 +27,10 @@ public class Main {
     }
 
     private static void command(String s) throws IOException {
+        if(isTrading) {
+            trading(s);
+            return;
+        }
         if(s == null || s.isEmpty()) {
             System.out.println("Вы ввели пустую строку");
             command(bufferedReader.readLine());
@@ -43,7 +45,13 @@ public class Main {
 
         switch (s) {
             case "1":
-                System.out.println("Торговец еще не приехал");
+                if(isBattleSceneUse) {
+                    System.out.println("Вы находитесь в битве сударь я не могу с вами торговать!");
+                    break;
+                }
+                Merchant.getSellItem(System.out);
+                System.out.println("Вы начали торговлю с торговцем, что бы закончить разговор введите exit");
+                isTrading = true;
                 break;
             case "2":
                 commitFight();
@@ -63,6 +71,45 @@ public class Main {
                 break;
         }
         command(bufferedReader.readLine());
+    }
+
+    private static void trading(String s) throws IOException {
+        if(s.equalsIgnoreCase("exit")) {
+            isTrading = false;
+            command(bufferedReader.readLine());
+            return;
+        }
+
+        String[] strings = s.split(" ");
+        String string = strings[0];
+        int amount = 1;
+        if(strings.length > 1) {
+            try {
+                amount = Integer.parseInt(strings[1]);
+            } catch (NumberFormatException _) {}
+        }
+
+        try {
+            Merchant.SellItem item = Merchant.SellItem.valueOf(string.toUpperCase());
+            int suma = player.getGold() - (item.getPrice() * amount);
+            if(suma < 0) {
+                System.out.println("У вас не хватает денег на покупку");
+                command(bufferedReader.readLine());
+                return;
+            }
+            String doo = player.toStringAll();
+            player.setGold(suma);
+            UseItem.use(player, item, amount);
+            System.out.println("Вы успешно всё сели");
+            System.out.println("до " + doo);
+            System.out.println("после " + player.toStringAll());
+            command(bufferedReader.readLine());
+            return;
+        } catch (IllegalArgumentException e) {
+            System.out.println("Такова товара не существует");
+            command(bufferedReader.readLine());
+            return;
+        }
     }
 
     private static void commitFight() {
